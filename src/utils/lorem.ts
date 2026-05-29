@@ -2,7 +2,14 @@ import { SENTENCE_TEMPLATES_BY_LANGUAGE, TEXT_PARTS_BY_LANGUAGE } from '../const
 import { Language, TextParts } from '../types';
 import { getRandomItem } from './random';
 
-type LoremOptions = { length: number; withParagraphs: boolean; language: Language };
+type LoremOptions = {
+  length: number;
+  withParagraphs: boolean;
+  language: Language;
+};
+
+const MIN_SENTENCES_IN_PARAGRAPH = 2;
+const PARAGRAPH_SIZE_VARIANTS = 3;
 
 const capitalize = (text: string): string => {
   if (!text.length) return text;
@@ -11,7 +18,7 @@ const capitalize = (text: string): string => {
 };
 
 const getRandomParagraphSize = (): number => {
-  return Math.floor(Math.random() * 3) + 2;
+  return Math.floor(Math.random() * PARAGRAPH_SIZE_VARIANTS) + MIN_SENTENCES_IN_PARAGRAPH;
 };
 
 const replaceTemplateVariables = (template: string, parts: TextParts): string => {
@@ -25,58 +32,20 @@ const replaceTemplateVariables = (template: string, parts: TextParts): string =>
 
 const generateSentence = (parts: TextParts, language: Language): string => {
   const template = getRandomItem(SENTENCE_TEMPLATES_BY_LANGUAGE[language]);
-
   const sentence = replaceTemplateVariables(template, parts).trim();
 
   return capitalize(sentence);
 };
 
-// export const generateLorem = (length: number): string => {
-//   let text = '';
+const appendChunk = (chunks: string[], chunk: string): number => {
+  chunks.push(chunk);
 
-//   while (text.length < length) {
-//     text += `${generateSentence(TEXT_PARTS)} `;
-//   }
-
-//   return text.trim().slice(0, length);
-// };
-
-// export const generateLorem = (options: { length: number; withParagraphs: boolean }): string => {
-//   const { length, withParagraphs } = options;
-//   const parts: string[] = [];
-
-//   let currentLength = 0;
-//   let sentencesInParagraph = 0;
-//   let targetParagraphSize = getRandomParagraphSize();
-
-//   while (currentLength < length) {
-//     const sentence = generateSentence(TEXT_PARTS);
-
-//     parts.push(sentence);
-
-//     currentLength += sentence.length + 1;
-
-//     sentencesInParagraph += 1;
-
-//     if (withParagraphs && sentencesInParagraph >= targetParagraphSize && currentLength < length) {
-//       parts.push('\n\n');
-
-//       sentencesInParagraph = 0;
-
-//       targetParagraphSize = getRandomParagraphSize();
-//     } else {
-//       parts.push(' ');
-//     }
-//   }
-
-//   return parts.join('').trim();
-// };
+  return chunk.length;
+};
 
 export const generateLorem = (options: LoremOptions): string => {
   const { length, withParagraphs, language } = options;
-
   const textParts = TEXT_PARTS_BY_LANGUAGE[language];
-
   const chunks: string[] = [];
 
   let currentLength = 0;
@@ -86,23 +55,18 @@ export const generateLorem = (options: LoremOptions): string => {
   while (currentLength < length) {
     const sentence = generateSentence(textParts, language);
 
-    chunks.push(sentence);
-
-    currentLength += sentence.length;
+    currentLength += appendChunk(chunks, sentence);
     sentencesInParagraph += 1;
 
     const shouldStartNewParagraph =
       withParagraphs && sentencesInParagraph >= targetParagraphSize && currentLength < length;
 
     if (shouldStartNewParagraph) {
-      chunks.push('\n\n');
-      currentLength += 2;
-
+      currentLength += appendChunk(chunks, '\n\n');
       sentencesInParagraph = 0;
       targetParagraphSize = getRandomParagraphSize();
     } else {
-      chunks.push(' ');
-      currentLength += 1;
+      currentLength += appendChunk(chunks, ' ');
     }
   }
 
